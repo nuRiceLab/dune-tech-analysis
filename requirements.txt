@@ -1,0 +1,54 @@
+# Core scientific stack
+numpy
+pandas
+scipy
+matplotlib
+seaborn
+scikit-learn
+scikit-image
+sympy
+statsmodels
+
+# Interactive widgets and Jupyter support
+notebook
+jupyterlab
+ipywidgets
+ipympl
+widgetsnbextension
+
+# Data handling
+h5py
+tables
+sqlalchemy
+xlrd
+openpyxl
+beautifulsoup4
+lxml
+
+# Visualization
+bokeh
+altair
+plotly
+
+# Performance and compression
+numba
+cython
+bottleneck
+numexpr
+blosc
+lz4
+zstandard
+snappy
+
+# Utilities
+cloudpickle
+dill
+patsy
+protobuf
+
+# Version control / JupyterLab plugins
+jupyterlab-git
+
+# Optional: adds the command-line interface
+jupyter-console
+
