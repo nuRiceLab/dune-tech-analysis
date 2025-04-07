@@ -1,0 +1,10 @@
+# apt.txt
+root-system
+python3-dev
+build-essential
+cmake
+g++
+libx11-dev
+libxpm-dev
+libxft-dev
+libxext-dev
