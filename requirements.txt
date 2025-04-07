@@ -54,3 +54,4 @@ jupyter-console
 
 # HEP
 uproot
+awkward
