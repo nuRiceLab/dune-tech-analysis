@@ -52,3 +52,5 @@ jupyterlab-git
 # Optional: adds the command-line interface
 jupyter-console
 
+# HEP
+uproot
