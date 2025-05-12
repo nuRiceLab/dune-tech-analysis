@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+# Add ROOT PPA and install dependencies
+apt-get update
+apt-get install -y dpkg-dev cmake g++ gcc binutils libx11-dev \
+  libxpm-dev libxft-dev libxext-dev python3-dev
+
+# Download and extract ROOT binary release (adjust version as needed)
+ROOT_VERSION=6.30.04
+wget https://root.cern/download/root_v${ROOT_VERSION}.Linux-ubuntu22.04-x86_64-gcc11.3.tar.gz
+tar -xzf root_v${ROOT_VERSION}.Linux-ubuntu22.04-x86_64-gcc11.3.tar.gz
+mv root /opt/root
+
+# Set up environment for ROOT (can also be done in start script or profile.d)
+echo "source /opt/root/bin/thisroot.sh" >> /etc/profile.d/root.sh
+chmod +x /etc/profile.d/root.sh
