@@ -55,3 +55,7 @@ jupyter-console
 # HEP
 uproot
 awkward
+iminuit
+tensorflow
+torch
+torchvision
