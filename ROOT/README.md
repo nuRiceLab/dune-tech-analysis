@@ -28,5 +28,3 @@ The script `run_install.sh` performs the following steps:
    ```bash 
    source run_install.sh
 
-
-
