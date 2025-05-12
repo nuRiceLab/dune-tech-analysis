@@ -1,4 +1,0 @@
-#!/bin/bash
-set -ex
-apt-get install -y dpkg-dev cmake g++ gcc binutils libx11-dev \
-  libxpm-dev libxft-dev libxext-dev python3-dev
