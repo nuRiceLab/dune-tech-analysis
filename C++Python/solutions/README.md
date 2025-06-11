@@ -21,6 +21,8 @@
 4. In the terminal, type the command in the following format to run your program:
    ```bash
    python [py_file]
+   ```
+   
 
    For example, for a python file name solution1.py, you would type python solution1.py
    
@@ -32,22 +34,28 @@
 2. In the terminal, type in the following format to compile the program:
    ```bash 
    g++ -o [executable_name] [file_name.cpp] 
-
+   ```
+   
    An example for the C++ file, solution1.cpp, would be this:
    ```bash
    g++ -o solution1 solution1.cpp
+   ```
+   
    Errors may appear that prevent the completion of the compilation of the executable. Address the errors first before atempting the compilation again.
 --- 
 3. To run the executable, in your terminal type in this format:
     ```bash
    ./[executable] [arguements]
+   ```
    
    For a program that does not accept arguments, an example would be solution1:
     ```bash
     ./solution1
+    ```
     
     An example would be for solution 2:
     ```bash
     ./solution2 0 1 2 2 1 0
+    ```
 
 
