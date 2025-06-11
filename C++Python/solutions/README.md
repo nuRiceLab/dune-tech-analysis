@@ -24,7 +24,10 @@
    ```
    
 
-   For example, for a python file name solution1.py, you would type python solution1.py
+   For example, for a python file name solution1.py, you would type
+   ```bash
+   python solution1.py
+   ```
    
 
 
