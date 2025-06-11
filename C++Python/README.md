@@ -41,11 +41,8 @@ Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]]
 Notice that the solution set must not contain duplicate triplets.
 
 ## Exercise 4: Basic Calculator
-<<<<<<< HEAD
 Given a string s representing a valid expression, implement a basic calculator to evaluate it, and return the result of the evaluation. Tested operations are addition(+), subtraction(-), and use of parentheses. 
-=======
-Given a string s representing a valid expression, implement a basic calculator to evaluate it, and return the result of the evaluation. Tested operations are addition(+), subtraction(-) and use of parentheses. 
->>>>>>> 4f335a4db7f819375e766ed2f90c5f353d416407
+
 
 Note: You are not allowed to use any built-in function which evaluates strings as mathematical expressions, such as eval().
 
