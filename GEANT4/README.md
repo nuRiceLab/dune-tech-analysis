@@ -1,1 +1,1 @@
-# Coding activites about GEANT4 (Digital Sim)
+# Coding activites about GEANT4 (Digital Twin)
