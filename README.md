@@ -52,7 +52,7 @@ Login into https://dune-tech.rice.edu/jupyterhub
 
 ## 👥 Contributors
 
-Developed and maintained by the nuRice group at **Rice University** in collaboration with researchers from **Lawrence Berkeley National Laboratory (LBNL)**, **SLAC National Accelerator Laboratory (SLAC)**, **Clorado State Univeristy** and **Brookhaven National Laboratory (BNL)**.
+Developed and maintained by the nuRiceLab group at **Rice University** in collaboration with researchers from **Lawrence Berkeley National Laboratory (LBNL)**, **SLAC National Accelerator Laboratory (SLAC)**, **Clorado State Univeristy** and **Brookhaven National Laboratory (BNL)**.
 
 Contributions, corrections, and new exercises are welcome — please open a pull request or file an issue.
 
