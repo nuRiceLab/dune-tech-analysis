@@ -1,0 +1,12 @@
+[project]
+name = "2026-database-exercises"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "jupyter-book>=2.1.5",
+    "jupyterlite-core>=0.7.6",
+    "jupyterlite-pyodide-kernel>=0.7.2",
+    "sqlmodel>=0.0.38",
+]

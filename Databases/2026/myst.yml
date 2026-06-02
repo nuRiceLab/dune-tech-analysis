@@ -1,0 +1,34 @@
+# See docs at: https://mystmd.org/guide/frontmatter
+version: 1
+project:
+  id: e539d53f-a1ce-4afe-a506-63533c6c512f
+  title: "Intro to Databases Exercises"
+  # description:
+  keywords: [databases, sql, nosql, "database management systems", "relational databases", "nosql databases"]
+  authors: ["Mike Clymer - Colorado State University"]
+  github: https://github.com/nuRiceLab/dune-tech-analysis
+
+  jupyter:
+    lite: true
+
+  plugins:
+    - plugins/pyodide-editable/pyodide-editable.mjs
+
+  toc:
+    - file: intro.md
+
+    - title: RDBMS Exercises
+      children:
+        - file: rdbms/sql.md
+        - file: rdbms/orm.md
+
+    - title: NoSQL Exercises
+      children:
+        - file: nosql/docdb.md
+
+site:
+  template: book-theme
+  options:
+    folders: true
+    favicon: media/dune-tech-logo-48x48.png
+    logo: media/dune-tech-logo-200x200.png
