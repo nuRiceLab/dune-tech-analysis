@@ -1,0 +1,49 @@
+# Macro file for example B1
+# Some Very Good Examples of GPS
+#
+# Can be run in batch, without graphic
+# or interactively: Idle> /control/execute run1.mac
+#
+# Change the default number of workers (in multi-threading mode) 
+#
+# Initialize kernel
+/run/numberOfThreads 1
+# Custom Geometry related commands
+/Geometry/ArPhase Gas
+/Geometry/steplim 0.1 mm
+
+/run/initialize
+#
+/control/verbose 2
+/run/verbose 2
+/event/verbose 0
+/tracking/verbose 0
+#
+#Geometry
+
+#
+/gps/particle e-
+/gps/pos/type Point
+/gps/pos/centre 0 0 0 cm
+/gps/ang/type iso
+
+# momentum direction
+#/gps/direction 0 0 -1
+# Mono Energetic
+#/gps/ene/type Mono
+#/gps/energy 7 eV
+
+# Gaussian Profile
+/gps/ene/type Gauss
+/gps/ene/mono 40 keV
+/gps/ene/sigma 2 keV
+
+# Uniform distribution
+#/gps/ene/type Lin
+#/gps/ene/min 1 eV
+#/gps/ene/max 10 eV
+#/gps/ene/gradient 0
+#/gps/ene/intercept 1
+
+# run number of events
+/run/beamOn 10000
