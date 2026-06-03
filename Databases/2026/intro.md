@@ -2,6 +2,4 @@
 
 ## Example Scenario
 
-## Tools and Libraries Used
-
-
+We will be creating a database for a university student course management system.

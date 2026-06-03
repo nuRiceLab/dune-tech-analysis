@@ -2,10 +2,10 @@
 version: 1
 project:
   id: e539d53f-a1ce-4afe-a506-63533c6c512f
-  title: "Intro to Databases Exercises"
+  title: "Intro to Databases: Examples"
   # description:
   keywords: [databases, sql, nosql, "database management systems", "relational databases", "nosql databases"]
-  authors: ["Mike Clymer - Colorado State University"]
+  # authors: ["Mike Clymer - Colorado State University"]
   github: https://github.com/nuRiceLab/dune-tech-analysis
 
   jupyter:
@@ -17,14 +17,31 @@ project:
   toc:
     - file: intro.md
 
-    - title: RDBMS Exercises
+    - title: RDBMS Examples
       children:
         - file: rdbms/sql.md
         - file: rdbms/orm.md
 
-    - title: NoSQL Exercises
+    # - title: NoSQL Examples
+    #   children:
+    #     - file: nosql/docdb.md
+
+    #### Resources ####
+    - title: Resources
       children:
-        - file: nosql/docdb.md
+        - url: https://pyodide.org/en/stable/
+          title: Pyodide
+        - url: https://sqlite.org/index.html
+          title: SQLite (SQL DB Engine)
+        - url: https://docs.python.org/3/library/sqlite3.html
+          title: sqlite3 — DB-API 2.0 interface for SQLite databases
+        - url: https://www.sqltutorial.org/
+          title: SQL Tutorial
+        # - url: https://sqlmodel.tiangolo.com/
+        #   title: SQLModel
+        # - url: https://tinydb.readthedocs.io/en/latest/
+        #   title: TinyDB (Document DB)
+
 
 site:
   template: book-theme

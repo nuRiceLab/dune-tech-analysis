@@ -1,3 +1,3 @@
-# RDBMS - Object Relational Mapper Exercises
+# RDBMS - Object Relational Mapping (ORM) Examples
 
-## Exercises
+## _Coming Soon_
