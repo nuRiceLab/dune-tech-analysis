@@ -93,17 +93,17 @@ def parse_args() -> argparse.Namespace:
         choices=("x", "y", "z"),
         default="x",
         help=(
-            "3D axis to drop for fixed-axis projection. Ignored when "
-            "--projection-mode pca."
+            "3D axis to drop for fixed-axis projection. Ignored by detector and "
+            "PCA projection modes."
         ),
     )
     parser.add_argument(
         "--projection-mode",
-        choices=("global-pca", "per-event-pca", "fixed"),
-        default="global-pca",
+        choices=("detector", "global-pca", "per-event-pca", "fixed"),
+        default="detector",
         help=(
-            "Use one global PCA basis by default: axis 0 is the common travel-like "
-            "axis, axis 1 is a visible transverse axis, and axis 2 is collapsed."
+            "detector uses fixed detector coordinates and does not run PCA. "
+            "global-pca uses one PCA basis for the full sample."
         ),
     )
     parser.add_argument(
@@ -127,7 +127,7 @@ def parse_args() -> argparse.Namespace:
         "--start-plane",
         type=float,
         default=20000.0,
-        help="Detector-axis coordinate of the fixed start plane.",
+        help="Detector-axis coordinate of the fixed longitudinal start plane.",
     )
     parser.add_argument(
         "--travel-sign",
@@ -145,6 +145,24 @@ def parse_args() -> argparse.Namespace:
         help=(
             "How to center the visible transverse axis. local-slice uses points in "
             "the first crop window along the travel axis."
+        ),
+    )
+    parser.add_argument(
+        "--transverse-axis",
+        choices=("x", "y", "z"),
+        default="x",
+        help=(
+            "Detector axis drawn vertically in detector projection mode. The "
+            "remaining axis is collapsed by summing deposits in the same image bin."
+        ),
+    )
+    parser.add_argument(
+        "--transverse-start-plane",
+        type=float,
+        default=20000.0,
+        help=(
+            "Detector-axis coordinate centered vertically in detector projection "
+            "mode. Default assumes particles also start at x/y=20000."
         ),
     )
     parser.add_argument(
@@ -296,6 +314,21 @@ def particle_name(pdg: int) -> str:
     return PDG_TO_NAME.get(int(pdg), f"pdg_{int(pdg)}")
 
 
+def chunk_particle_name(chunk: list[dict], input_path: Path) -> str:
+    if not chunk:
+        raise ValueError(f"Input chunk is empty: {input_path}")
+    name = particle_name(int(chunk[0]["pdg"]))
+    if name not in CLASS_TO_LABEL:
+        raise ValueError(f"Unsupported particle PDG {int(chunk[0]['pdg'])} ({name}).")
+    return name
+
+
+def caps_reached(selected: Counter[str], target_classes: list[str], max_per_class: int | None) -> bool:
+    if max_per_class is None:
+        return False
+    return all(selected[name] >= max_per_class for name in target_classes)
+
+
 def projected_axes(drop_axis: str) -> tuple[int, int]:
     axes = {"x": 0, "y": 1, "z": 2}
     drop = axes[drop_axis]
@@ -317,25 +350,42 @@ def pca_basis_from_coords(coords: torch.Tensor) -> torch.Tensor:
     return eigenvectors[:, order]
 
 
-def global_pca_geometry(input_paths: list[Path], energy_min: float, energy_max: float) -> dict:
+def global_pca_geometry(
+    input_paths: list[Path],
+    energy_min: float,
+    energy_max: float,
+    max_per_class: int | None,
+) -> dict:
     """Infer one PCA basis and crop reference values for the whole dataset."""
     sum_xyz = torch.zeros(3, dtype=torch.float64)
     sum_outer = torch.zeros((3, 3), dtype=torch.float64)
     count = 0
     first_xyz = []
+    selected_per_class: Counter[str] = Counter()
 
     for input_path in input_paths:
         chunk = torch.load(input_path, map_location="cpu", weights_only=False)
+        chunk_name = chunk_particle_name(chunk, input_path)
+        if max_per_class is not None and selected_per_class[chunk_name] >= max_per_class:
+            continue
         for event in chunk:
             energy = float(event["target"])
             if energy < energy_min or energy > energy_max:
                 continue
+            name = particle_name(int(event["pdg"]))
+            if max_per_class is not None and selected_per_class[name] >= max_per_class:
+                break
 
             coords = event["coords"].double()
             sum_xyz += coords.sum(dim=0)
             sum_outer += coords.T @ coords
             count += len(coords)
             first_xyz.append(coords[0])
+            selected_per_class[name] += 1
+            if max_per_class is not None and selected_per_class[name] >= max_per_class:
+                break
+        if caps_reached(selected_per_class, CLASS_NAMES, max_per_class):
+            break
 
     if count == 0:
         raise RuntimeError("No events survived the energy cut for global PCA.")
@@ -352,18 +402,30 @@ def global_pca_geometry(input_paths: list[Path], energy_min: float, energy_max: 
         basis[:, 0] *= -1
 
     u_min, u_first, u_max, v_median = [], [], [], []
+    selected_per_class = Counter()
     for input_path in input_paths:
         chunk = torch.load(input_path, map_location="cpu", weights_only=False)
+        chunk_name = chunk_particle_name(chunk, input_path)
+        if max_per_class is not None and selected_per_class[chunk_name] >= max_per_class:
+            continue
         for event in chunk:
             energy = float(event["target"])
             if energy < energy_min or energy > energy_max:
                 continue
+            name = particle_name(int(event["pdg"]))
+            if max_per_class is not None and selected_per_class[name] >= max_per_class:
+                break
 
             projected = event["coords"].float() @ basis[:, :2]
             u_min.append(projected[:, 0].min())
             u_first.append(projected[0, 0])
             u_max.append(projected[:, 0].max())
             v_median.append(projected[:, 1].median())
+            selected_per_class[name] += 1
+            if max_per_class is not None and selected_per_class[name] >= max_per_class:
+                break
+        if caps_reached(selected_per_class, CLASS_NAMES, max_per_class):
+            break
 
     u_min_t = torch.stack(u_min)
     u_first_t = torch.stack(u_first)
@@ -421,6 +483,28 @@ def per_event_pca_project(coords: torch.Tensor) -> torch.Tensor:
 def fixed_axis_project(coords: torch.Tensor, keep_axes: tuple[int, int]) -> torch.Tensor:
     points = coords[:, keep_axes].float()
     return points - points[0]
+
+
+def detector_project(
+    coords: torch.Tensor,
+    start_axis: int,
+    transverse_axis: int,
+    start_plane: float,
+    transverse_start_plane: float,
+    travel_sign: str,
+    crop_size: float,
+    margin: float,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Project with fixed detector axes and fixed start coordinates."""
+    sign = 1.0 if travel_sign == "positive" else -1.0
+    longitudinal = sign * (coords[:, start_axis].float() - start_plane)
+    transverse = coords[:, transverse_axis].float()
+    points = torch.stack((longitudinal, transverse), dim=1)
+
+    lower = torch.empty(2, dtype=torch.float32)
+    lower[0] = -crop_size * margin
+    lower[1] = transverse_start_plane - crop_size / 2
+    return points, lower
 
 
 def crop_lower_corner(points_2d: torch.Tensor, crop_size: float, margin: float) -> torch.Tensor:
@@ -499,29 +583,65 @@ def make_image(
     start_axis: int,
     start_plane: float,
     travel_sign: str,
+    transverse_axis: int,
+    transverse_start_plane: float,
 ) -> torch.Tensor | None:
     """Project one sparse 3D tensor into one dense [1, H, W] image."""
-    if projection_mode == "global-pca":
+    if projection_mode == "detector":
+        points, lower = detector_project(
+            coords=coords,
+            start_axis=start_axis,
+            transverse_axis=transverse_axis,
+            start_plane=start_plane,
+            transverse_start_plane=transverse_start_plane,
+            travel_sign=travel_sign,
+            crop_size=crop_size,
+            margin=start_margin,
+        )
+    elif projection_mode == "global-pca":
         if geometry is None:
             raise ValueError("--projection-mode global-pca requires global PCA geometry.")
         points = coords.float() @ geometry["basis"][:, :2]
+        lower = crop_lower_with_geometry(
+            points,
+            coords,
+            crop_size,
+            start_margin,
+            anchor_mode,
+            transverse_center_mode,
+            geometry,
+            start_axis,
+            start_plane,
+            travel_sign,
+        )
     elif projection_mode == "per-event-pca":
         points = per_event_pca_project(coords)
+        lower = crop_lower_with_geometry(
+            points,
+            coords,
+            crop_size,
+            start_margin,
+            anchor_mode,
+            transverse_center_mode,
+            geometry,
+            start_axis,
+            start_plane,
+            travel_sign,
+        )
     else:
         points = fixed_axis_project(coords, keep_axes=keep_axes)
-
-    lower = crop_lower_with_geometry(
-        points,
-        coords,
-        crop_size,
-        start_margin,
-        anchor_mode,
-        transverse_center_mode,
-        geometry,
-        start_axis,
-        start_plane,
-        travel_sign,
-    )
+        lower = crop_lower_with_geometry(
+            points,
+            coords,
+            crop_size,
+            start_margin,
+            anchor_mode,
+            transverse_center_mode,
+            geometry,
+            start_axis,
+            start_plane,
+            travel_sign,
+        )
     rel = (points - lower) / crop_size
     pix = torch.floor(rel * image_size).long()
 
@@ -573,6 +693,9 @@ def main() -> None:
     input_paths = input_paths_from_args(args)
     keep_axes = projected_axes(args.drop_axis)
     start_axis = axis_index(args.start_axis)
+    transverse_axis = axis_index(args.transverse_axis)
+    if args.projection_mode == "detector" and transverse_axis == start_axis:
+        raise ValueError("--transverse-axis must differ from --start-axis in detector mode.")
     crop_size = (
         args.crop_size
         if args.crop_size is not None
@@ -591,7 +714,12 @@ def main() -> None:
     )
     geometry = None
     if args.projection_mode == "global-pca":
-        geometry = global_pca_geometry(input_paths, args.energy_min, args.energy_max)
+        geometry = global_pca_geometry(
+            input_paths,
+            args.energy_min,
+            args.energy_max,
+            args.max_per_class,
+        )
 
     images: list[torch.Tensor] = []
     labels: list[int] = []
@@ -602,11 +730,16 @@ def main() -> None:
     seen = 0
     skipped_energy = 0
     skipped_class_full = 0
+    skipped_files_class_full = 0
     skipped_empty = 0
     selected_per_class: Counter[str] = Counter()
 
     for input_path in input_paths:
         chunk = torch.load(input_path, map_location="cpu", weights_only=False)
+        chunk_name = chunk_particle_name(chunk, input_path)
+        if args.max_per_class is not None and selected_per_class[chunk_name] >= args.max_per_class:
+            skipped_files_class_full += 1
+            continue
         for event in chunk:
             seen += 1
             energy = float(event["target"])
@@ -623,7 +756,7 @@ def main() -> None:
                 and selected_per_class[name] >= args.max_per_class
             ):
                 skipped_class_full += 1
-                continue
+                break
 
             image = make_image(
                 coords=event["coords"],
@@ -645,6 +778,8 @@ def main() -> None:
                 start_axis=start_axis,
                 start_plane=args.start_plane,
                 travel_sign=args.travel_sign,
+                transverse_axis=transverse_axis,
+                transverse_start_plane=args.transverse_start_plane,
             )
             if image is None:
                 skipped_empty += 1
@@ -661,15 +796,12 @@ def main() -> None:
                 break
             if (
                 args.max_per_class is not None
-                and all(selected_per_class[name] >= args.max_per_class for name in CLASS_NAMES)
+                and selected_per_class[name] >= args.max_per_class
             ):
                 break
         if args.max_events is not None and len(images) >= args.max_events:
             break
-        if (
-            args.max_per_class is not None
-            and all(selected_per_class[name] >= args.max_per_class for name in CLASS_NAMES)
-        ):
+        if caps_reached(selected_per_class, CLASS_NAMES, args.max_per_class):
             break
 
     if not images:
@@ -712,6 +844,8 @@ def main() -> None:
             "start_axis": args.start_axis,
             "start_plane": args.start_plane,
             "travel_sign": args.travel_sign,
+            "transverse_axis": args.transverse_axis,
+            "transverse_start_plane": args.transverse_start_plane,
             "transverse_center_mode": args.transverse_center_mode,
             "start_padding_cm": args.start_padding_cm,
             "start_padding_pixels": args.start_padding_pixels,
@@ -760,6 +894,7 @@ def main() -> None:
     print(f"Read events        : {seen}")
     print(f"Skipped by energy  : {skipped_energy}")
     print(f"Skipped class full : {skipped_class_full}")
+    print(f"Skipped full files : {skipped_files_class_full}")
     print(f"Skipped empty crop : {skipped_empty}")
     print(f"Wrote images       : {len(images)}")
     print(f"Selected per class : {dict(selected_per_class)}")
