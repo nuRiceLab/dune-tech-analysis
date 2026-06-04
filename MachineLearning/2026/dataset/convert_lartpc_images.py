@@ -24,6 +24,11 @@ from pathlib import Path
 
 import torch
 
+try:
+    from tqdm.auto import tqdm
+except ImportError:  # pragma: no cover - only used on minimal environments.
+    tqdm = None
+
 
 PDG_TO_NAME = {
     11: "electron",
@@ -293,6 +298,13 @@ def parse_args() -> argparse.Namespace:
         default=8,
         help="Number of preview images to write.",
     )
+    parser.add_argument(
+        "--no-progress",
+        dest="progress",
+        action="store_false",
+        help="Disable tqdm progress bars.",
+    )
+    parser.set_defaults(progress=True)
     return parser.parse_args()
 
 
@@ -312,6 +324,12 @@ def input_paths_from_args(args: argparse.Namespace) -> list[Path]:
 
 def particle_name(pdg: int) -> str:
     return PDG_TO_NAME.get(int(pdg), f"pdg_{int(pdg)}")
+
+
+def progress_bar(items: list[Path], description: str, enabled: bool):
+    if enabled and tqdm is not None:
+        return tqdm(items, desc=description, unit="file")
+    return items
 
 
 def chunk_particle_name(chunk: list[dict], input_path: Path) -> str:
@@ -355,6 +373,7 @@ def global_pca_geometry(
     energy_min: float,
     energy_max: float,
     max_per_class: int | None,
+    progress: bool,
 ) -> dict:
     """Infer one PCA basis and crop reference values for the whole dataset."""
     sum_xyz = torch.zeros(3, dtype=torch.float64)
@@ -363,7 +382,7 @@ def global_pca_geometry(
     first_xyz = []
     selected_per_class: Counter[str] = Counter()
 
-    for input_path in input_paths:
+    for input_path in progress_bar(input_paths, "PCA covariance", progress):
         chunk = torch.load(input_path, map_location="cpu", weights_only=False)
         chunk_name = chunk_particle_name(chunk, input_path)
         if max_per_class is not None and selected_per_class[chunk_name] >= max_per_class:
@@ -403,7 +422,7 @@ def global_pca_geometry(
 
     u_min, u_first, u_max, v_median = [], [], [], []
     selected_per_class = Counter()
-    for input_path in input_paths:
+    for input_path in progress_bar(input_paths, "PCA summary", progress):
         chunk = torch.load(input_path, map_location="cpu", weights_only=False)
         chunk_name = chunk_particle_name(chunk, input_path)
         if max_per_class is not None and selected_per_class[chunk_name] >= max_per_class:
@@ -719,6 +738,7 @@ def main() -> None:
             args.energy_min,
             args.energy_max,
             args.max_per_class,
+            args.progress,
         )
 
     images: list[torch.Tensor] = []
@@ -734,7 +754,7 @@ def main() -> None:
     skipped_empty = 0
     selected_per_class: Counter[str] = Counter()
 
-    for input_path in input_paths:
+    for input_path in progress_bar(input_paths, "Converting", args.progress):
         chunk = torch.load(input_path, map_location="cpu", weights_only=False)
         chunk_name = chunk_particle_name(chunk, input_path)
         if args.max_per_class is not None and selected_per_class[chunk_name] >= args.max_per_class:
@@ -857,6 +877,7 @@ def main() -> None:
             "max_per_class": args.max_per_class,
             "shuffle": args.shuffle,
             "shuffle_seed": args.shuffle_seed,
+            "progress": args.progress,
             "log1p": args.log1p,
             "clip_mev": clip_mev,
             "feature_column": args.feature_column,
