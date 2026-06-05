@@ -78,7 +78,7 @@ class LArTPCParticles(Dataset):
                 f"{self.raw_filename!r} in {self.raw_folder} and call process()."
             )
 
-        payload = torch.load(self.processed_paths[0 if train else 1], map_location="cpu")
+        payload = torch.load(self.processed_paths[0 if train else 1], map_location="cpu", weights_only=False)
         self.data = payload["images"].float()
         self.targets = payload["labels"].long()
         self.metadata = {key: value for key, value in payload.items() if key not in {"images", "labels"}}
@@ -143,7 +143,7 @@ class LArTPCParticles(Dataset):
     def process(self) -> None:
         """Create MNIST-like processed train/test payloads from one raw payload."""
         self.processed_folder.mkdir(parents=True, exist_ok=True)
-        payload = torch.load(self.raw_path, map_location="cpu")
+        payload = torch.load(self.raw_path, map_location="cpu", weights_only=False)
 
         if "train" in payload and "test" in payload:
             train_payload = self._normalize_payload(payload["train"], payload)
